@@ -1,23 +1,35 @@
 import { chromium, Browser } from "playwright";
 import { GenezioDeploy, GenezioMethod } from "@genezio/types";
+import fs from "fs";
+
+export type CsvDataEntry = {
+  [key: string]: string;
+};
 
 @GenezioDeploy()
-export class Backend {
+export class BackendService {
+  constructor() {
+    console.log("Backend initialized");
+  }
+
   /**
    * @method downloadCsv
    * @description This method is responsible for downloading a csv file from a website.
    * @param link - The link to the website.
    * @param inputId - The id of the input that will be clicked to download the file.
    * @param inputDownload - The id of the input that will be clicked to download the file.
+   * @param nameFile - The name of the file that will be downloaded.
    * @returns A boolean indicating if the file was downloaded successfully.
-   * exemple: downloadCsv("https://www.bnro.ro/Cursul-de-schimb--7372.aspx", "btnGenereaza_668", "ctl00_ctl00_CPH1_CPH1_STATISTICS_REP_5_imgCsv")
+   * @example downloadCsv("https://www.bnro.ro/Cursul-de-schimb--7372.aspx", "btnGenereaza_668", "ctl00_ctl00_CPH1_CPH1_STATISTICS_REP_5_imgCsv")
    */
   @GenezioMethod()
   async downloadCsv(
     link: string,
     inputId: string,
     inputDownload: string,
-  ): Promise<boolean> {
+    nameFile: string,
+  ): Promise<void> {
+    console.log("Downloading file...");
     const browser: Browser = await chromium.launch({
       headless: false,
     });
@@ -34,13 +46,62 @@ export class Backend {
         page.waitForEvent("download"),
         page.click(`#${inputDownload}`),
       ]);
-      await download.saveAs("dailySeries.csv").then(() => {
+      await download.saveAs(nameFile).then(() => {
         console.log("File downloaded");
       });
-      return true;
     } catch (error) {
       console.log(error);
-      return false;
+      throw new Error(error as string);
     }
+  }
+
+  /**
+   * @method generateCsvCronJob
+   * @description This method is responsible for generating a csv file from a website using a cron job.
+   * @returns A boolean indicating if the file was generated successfully.
+   * @example generateCsvCronJob()
+   */
+  @GenezioMethod({ type: "cron", cronString: "0 2 * * *" })
+  async generateCsvCronJob(): Promise<void> {
+    console.log("Cron job started at: ", new Date());
+    const link = "https://www.bnro.ro/Cursul-de-schimb--7372.aspx";
+    const inputId = "btnGenereaza_668";
+    const inputDownload = "ctl00_ctl00_CPH1_CPH1_STATISTICS_REP_5_imgCsv";
+    const inputIdArchive = "btnGenereaza_702";
+    const inputDownloadArchive =
+      "ctl00_ctl00_CPH1_CPH1_STATISTICS_REP_5_imgCsv";
+    try {
+      await this.downloadCsv(link, inputId, inputDownload, "dailySeries.csv");
+      await this.downloadCsv(
+        link,
+        inputIdArchive,
+        inputDownloadArchive,
+        "archive.csv",
+      );
+      const dataDailySeries = await this.readCsv("dailySeries.csv");
+      const dataArchive = await this.readCsv("archive.csv");
+      console.log(dataDailySeries);
+      console.log(dataArchive);
+    } catch (error) {
+      console.log(error);
+      throw new Error(error as string);
+    }
+  }
+
+  @GenezioMethod()
+  async readCsv(csvFileName: string): Promise<CsvDataEntry[]> {
+    const dataCsv = fs.readFileSync(csvFileName, "utf8").split("\n");
+    const nameColumns = dataCsv[5].split(";");
+
+    const dataToReturn = dataCsv.slice(6).map((row) => {
+      const rowValues = row.split(";");
+      const entry: CsvDataEntry = {};
+      nameColumns.forEach((column, index) => {
+        entry[column] = rowValues[index];
+      });
+      return entry;
+    });
+
+    return dataToReturn;
   }
 }
