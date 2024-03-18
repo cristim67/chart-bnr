@@ -1,10 +1,8 @@
-import { chromium, Browser } from "playwright";
+import { Browser, chromium } from "playwright";
 import { GenezioDeploy, GenezioMethod } from "@genezio/types";
 import fs from "fs";
+import {CsvDataEntry} from "./models/excelTypes";
 
-export type CsvDataEntry = {
-  [key: string]: string;
-};
 
 @GenezioDeploy()
 export class BackendService {
@@ -90,18 +88,17 @@ export class BackendService {
 
   @GenezioMethod()
   async readCsv(csvFileName: string): Promise<CsvDataEntry[]> {
-    const dataCsv = fs.readFileSync(csvFileName, "utf8").split("\n");
-    const nameColumns = dataCsv[5].split(";");
+    console.log("Reading csv file...");
+    const dataCsv: string[] = fs.readFileSync(csvFileName, "utf8").split("\n");
+    const nameColumns: string[] = dataCsv[5].split(";");
 
-    const dataToReturn = dataCsv.slice(6).map((row) => {
-      const rowValues = row.split(";");
+    return dataCsv.slice(6).map((row: string) => {
+      const rowValues: string[] = row.split(";");
       const entry: CsvDataEntry = {};
-      nameColumns.forEach((column, index) => {
+      nameColumns.forEach((column: string, index: number) => {
         entry[column] = rowValues[index];
       });
       return entry;
     });
-
-    return dataToReturn;
   }
 }
