@@ -1,25 +1,28 @@
 import { Browser, chromium } from "playwright";
 import { GenezioDeploy, GenezioMethod } from "@genezio/types";
 import fs from "fs";
-import {CsvDataEntry} from "./models/excelTypes";
+import path from 'path';
+import { CsvDataEntry } from "./models/excelTypes";
+import { Storage } from '@google-cloud/storage';
 
+const storage = new Storage({
+  keyFilename: "./config/thinking-glass-425111-v0-c4932ebb81d9.json",
+});
+
+const tmpDir = '/tmp/';
+if (!fs.existsSync(tmpDir)) {
+  fs.mkdirSync(tmpDir, { recursive: true });
+}
 
 @GenezioDeploy()
 export class BackendService {
+  private readonly bucketName: string;
+
   constructor() {
     console.log("Backend initialized");
+    this.bucketName = 'bucket-cristimiloiu';
   }
 
-  /**
-   * @method downloadCsv
-   * @description This method is responsible for downloading a csv file from a website.
-   * @param link - The link to the website.
-   * @param inputId - The id of the input that will be clicked to download the file.
-   * @param inputDownload - The id of the input that will be clicked to download the file.
-   * @param nameFile - The name of the file that will be downloaded.
-   * @returns A boolean indicating if the file was downloaded successfully.
-   * @example downloadCsv("https://www.bnro.ro/Cursul-de-schimb--7372.aspx", "btnGenereaza_668", "ctl00_ctl00_CPH1_CPH1_STATISTICS_REP_5_imgCsv")
-   */
   @GenezioMethod()
   async downloadCsv(
     link: string,
@@ -44,21 +47,18 @@ export class BackendService {
         page.waitForEvent("download"),
         page.click(`#${inputDownload}`),
       ]);
-      await download.saveAs(nameFile).then(() => {
+      const filePath = path.join(tmpDir, nameFile);
+      await download.saveAs(filePath).then(() => {
         console.log("File downloaded");
       });
     } catch (error) {
       console.log(error);
       throw new Error(error as string);
+    } finally {
+      await browser.close();
     }
   }
 
-  /**
-   * @method generateCsvCronJob
-   * @description This method is responsible for generating a csv file from a website using a cron job.
-   * @returns A boolean indicating if the file was generated successfully.
-   * @example generateCsvCronJob()
-   */
   @GenezioMethod({ type: "cron", cronString: "0 2 * * *" })
   async generateCsvCronJob(): Promise<void> {
     console.log("Cron job started at: ", new Date());
@@ -76,10 +76,9 @@ export class BackendService {
         inputDownloadArchive,
         "archive.csv",
       );
-      const dataDailySeries = await this.readCsv("dailySeries.csv");
-      const dataArchive = await this.readCsv("archive.csv");
-      console.log(dataDailySeries);
-      console.log(dataArchive);
+      await this.uploadCsvToGCS("dailySeries.csv");
+      await this.uploadCsvToGCS("archive.csv");
+      console.log("Successfully downloaded and uploaded csv files to GCS.")
     } catch (error) {
       console.log(error);
       throw new Error(error as string);
@@ -88,8 +87,16 @@ export class BackendService {
 
   @GenezioMethod()
   async readCsv(csvFileName: string): Promise<CsvDataEntry[]> {
-    console.log("Reading csv file...");
-    const dataCsv: string[] = fs.readFileSync(csvFileName, "utf8").split("\n");
+    console.log(`Reading csv file ${csvFileName}...`);
+    const filePath = path.join(tmpDir, csvFileName);
+    if (!fs.existsSync(filePath)) {
+      const csvFileNameDownload = csvFileName.replace("/tmp/", "");
+      console.log(`File ${csvFileName} not found. Downloading from GCS...`);
+      await this.downloadCsvFromGCS(csvFileNameDownload);
+    }
+
+    const dataCsv: string[] = fs.readFileSync(filePath, "utf8").split("\n");
+    console.log(dataCsv.length);
     const nameColumns: string[] = dataCsv[5].split(";");
 
     return dataCsv.slice(6).map((row: string) => {
@@ -100,5 +107,38 @@ export class BackendService {
       });
       return entry;
     });
+  }
+
+  @GenezioMethod()
+  async uploadCsvToGCS(csvFileName: string): Promise<void> {
+    console.log(`Uploading ${csvFileName} to GCS...`);
+    try {
+      const bucket = storage.bucket(this.bucketName);
+      const filePath = path.join(tmpDir, csvFileName);
+      await bucket.upload(filePath, {
+        destination: csvFileName,
+      });
+      console.log(`Successfully uploaded ${csvFileName} to GCS`);
+    } catch (error) {
+      console.log(error);
+      throw new Error(error as string);
+    }
+  }
+
+  @GenezioMethod()
+  async downloadCsvFromGCS(csvFileName: string): Promise<void> {
+    console.log(`Downloading ${csvFileName} from GCS...`);
+    try {
+      const bucket = storage.bucket(this.bucketName);
+      const filePath = path.join(tmpDir, csvFileName);
+      await bucket.file(csvFileName).download({ destination: filePath });
+      if (!fs.existsSync(filePath)) {
+        throw new Error(`File ${csvFileName} not found in GCS`);
+      }
+      console.log(`Successfully downloaded ${csvFileName} from GCS`);
+    } catch (error) {
+      console.log(error);
+      throw new Error(error as string);
+    }
   }
 }

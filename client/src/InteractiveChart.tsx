@@ -22,7 +22,7 @@ export default function InteractiveChart() {
 
   useEffect(() => {
     async function fetchData() {
-      const result = await BackendService.readCsv("./dailySeries.csv");
+      const result = await BackendService.readCsv("dailySeries.csv");
       console.log(result);
       setData(result);
       setCurrencyAvailable(

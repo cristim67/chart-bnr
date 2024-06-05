@@ -20,8 +20,6 @@ backend:
     deploy: npm install
     # List of scripts to run before starting `genezio local`.
     local: npm install
-  # The cloud provider where the backend is deployed.
-  cloudProvider: genezio
 # Information about the frontend, including the path, language, and publish directory.
 # It is optional. It can also be an array if there are multiple frontends you want to deploy.
 frontend:
@@ -45,3 +43,5 @@ frontend:
     start:
       - npm install
       - npm run dev
+  subdomain: blush-varying-crayfish
+cloudProvider: genezio-aws

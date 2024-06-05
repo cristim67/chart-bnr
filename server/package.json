@@ -9,6 +9,8 @@
     "license": "ISC",
     "dependencies": {
         "@genezio/types": "^1.0.14",
+        "@google-cloud/bigquery": "^7.7.1",
+        "@google-cloud/storage": "^7.11.1",
         "node-fetch": "^3.3.2",
         "playwright": "^1.42.1"
     },
@@ -16,7 +18,7 @@
         "tabWidth": 2
     },
     "devDependencies": {
-        "@types/node": "^20.11.29",
+        "@types/node": "^20.11.30",
         "@typescript-eslint/eslint-plugin": "^6.14.0",
         "@typescript-eslint/parser": "^6.14.0",
         "eslint": "^8.55.0"
