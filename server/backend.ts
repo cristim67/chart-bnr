@@ -4,9 +4,11 @@ import fs from "fs";
 import path from 'path';
 import { CsvDataEntry } from "./models/excelTypes";
 import { Storage } from '@google-cloud/storage';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const storage = new Storage({
-  keyFilename: "./config/thinking-glass-425111-v0-c4932ebb81d9.json",
+  keyFilename: process.env.FILE_PATH_BUCKET,
 });
 
 const tmpDir = '/tmp/';
