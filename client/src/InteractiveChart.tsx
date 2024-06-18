@@ -37,7 +37,7 @@ export default function InteractiveChart() {
   }, []);
 
   const filteredData = data.filter(entry => {
-    const date = new Date(entry.Data);
+    const date = new Date(entry.Data.split('.').reverse().join('-'));
     return date >= dataStart && date <= dataEnd;
   });
 

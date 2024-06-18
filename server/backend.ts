@@ -89,7 +89,6 @@ export class BackendService {
 
   @GenezioMethod()
   async readCsv(csvFileName: string): Promise<CsvDataEntry[]> {
-    console.log(`Reading csv file ${csvFileName}...`);
     const filePath = path.join(tmpDir, csvFileName);
     if (!fs.existsSync(filePath)) {
       const csvFileNameDownload = csvFileName.replace("/tmp/", "");
@@ -98,7 +97,6 @@ export class BackendService {
     }
 
     const dataCsv: string[] = fs.readFileSync(filePath, "utf8").split("\n");
-    console.log(dataCsv.length);
     const nameColumns: string[] = dataCsv[5].split(";");
 
     return dataCsv.slice(6).map((row: string) => {
