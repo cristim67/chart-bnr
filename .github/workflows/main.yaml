@@ -1,0 +1,20 @@
+name: genezio workflow
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+      - uses: Genez-io/genezio-github-action@v2
+        with:
+          token: ${{ secrets.GENEZIO_TOKEN }}
+      - name: Deploy
+        working-directory: ./
+        run: genezio deploy
+        env:
+          CI: false
