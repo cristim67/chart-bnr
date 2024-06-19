@@ -2,7 +2,7 @@
 # The name of the project.
 name: chart
 # The region where the project is deployed.
-region: eu-central-1
+region: us-east-1
 # The version of the Genezio YAML configuration to parse.
 yamlVersion: 2
 backend:
@@ -43,5 +43,5 @@ frontend:
     start:
       - npm install
       - npm run dev
-  subdomain: blush-varying-crayfish
+  subdomain: tpi-cristi-miloiu
 cloudProvider: genezio-aws
